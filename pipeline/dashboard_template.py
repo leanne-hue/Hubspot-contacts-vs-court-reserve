@@ -1,0 +1,188 @@
+# -*- coding: utf-8 -*-
+"""Self-contained dashboard HTML. Data is injected at /*__DATA__*/."""
+
+HTML_TEMPLATE = r"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pickleplex — HubSpot x Court Reserve Coverage</title>
+<style>
+  :root{
+    --green:#1F6F43; --green-d:#155233; --ink:#1d2530; --muted:#6b7785;
+    --line:#e6e9ee; --bg:#f4f6f8; --card:#ffffff; --accent:#eaf5ee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       color:var(--ink);background:var(--bg);line-height:1.45}
+  .wrap{max-width:1040px;margin:0 auto;padding:20px 16px 60px}
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+       background:linear-gradient(135deg,var(--green),var(--green-d));color:#fff;
+       border-radius:14px;padding:20px 22px;box-shadow:0 6px 20px rgba(21,82,51,.18)}
+  header.top h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.2px}
+  header.top .sub{opacity:.9;font-size:13px;margin-top:2px}
+  .logo{font-weight:800;font-size:22px;background:#fff;color:var(--green);
+       width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+  .updated{margin-left:auto;font-size:12px;opacity:.9;text-align:right}
+  .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0 8px}
+  .controls label{font-weight:600;font-size:14px}
+  select{font-size:15px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;
+       background:#fff;min-width:220px;font-weight:600;color:var(--ink)}
+  .dl{margin-left:auto}
+  .privnote{font-size:12.5px;color:var(--muted);margin:6px 0 0;line-height:1.5}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--green);color:#fff;
+       text-decoration:none;font-weight:700;font-size:14px;padding:11px 18px;border-radius:10px;
+       border:none;cursor:pointer;box-shadow:0 3px 10px rgba(31,111,67,.25)}
+  .btn:hover{background:var(--green-d)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:18px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .stat .n{font-size:24px;font-weight:800;color:var(--green)}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 8px;margin:20px 0}
+  section h2{font-size:16px;margin:0 0 4px}
+  section .note{font-size:12.5px;color:var(--muted);margin:0 0 12px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.me{background:var(--accent)}
+  tr.me td{font-weight:700}
+  .bar{height:8px;border-radius:6px;background:#edf0f3;overflow:hidden;min-width:60px}
+  .bar > i{display:block;height:100%;background:var(--green)}
+  .pcttd{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  tfoot td{font-weight:800;border-top:2px solid var(--line)}
+  .scroll{overflow-x:auto}
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:30px}
+  @media (max-width:560px){
+    header.top h1{font-size:17px}.updated{margin-left:0;text-align:left;width:100%}
+    .dl{margin-left:0;width:100%}.btn{width:100%;justify-content:center}
+    select{min-width:0;width:100%}.controls label{width:100%}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="logo">P</div>
+    <div>
+      <h1>Pickleplex — HubSpot &times; Court Reserve Coverage</h1>
+      <div class="sub">Contacts grouped by Contact Owner (location), cross-referenced with Court Reserve members by email.</div>
+    </div>
+    <div class="updated">Last updated<br><strong id="updated"></strong></div>
+  </header>
+
+  <div class="controls">
+    <label for="loc">Court Reserve location:</label>
+    <select id="loc"></select>
+    <div class="dl"><a id="dl" class="btn" href="#" target="_blank" rel="noopener">⬇ Download list</a></div>
+  </div>
+
+  <p class="privnote"><i>The outreach spreadsheets contain contact details and are kept private.</i>
+     The download opens the GitHub Actions page — open the latest "Update dashboard" run and download the
+     <b>outreach-lists</b> artifact (requires GitHub login). The dashboard tables below show aggregate counts only.</p>
+
+  <div class="cards" id="cards"></div>
+
+  <section>
+    <h2>Court Reserve coverage — <span id="covLoc"></span></h2>
+    <p class="note">For the selected location's member list, this shows how many of each Contact Owner's HubSpot
+       contacts already exist as members at that location (matched by email). The row matching the selected
+       location's owner is highlighted.</p>
+    <div class="scroll">
+      <table id="covTable">
+        <thead><tr>
+          <th>Contact Owner</th><th class="num">HubSpot Contacts</th>
+          <th class="num">In Court Reserve</th><th class="num">% Coverage</th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>Contacts by Contact Owner — full HubSpot base</h2>
+    <p class="note">This table always shows the complete HubSpot picture across all owners, regardless of the
+       location selected above (so you can see the full contact base per owner). Total contacts:
+       <strong id="totalC"></strong>.</p>
+    <div class="scroll">
+      <table id="ownerTable">
+        <thead><tr><th>Contact Owner</th><th>Owner Email</th><th class="num">Contacts</th></tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Generated automatically from the HubSpot API and Court Reserve member exports.
+    Outreach lists (contacts not yet in Court Reserve) are kept private and downloaded from GitHub Actions.
+  </footer>
+</div>
+
+<script id="data" type="application/json">/*__DATA__*/</script>
+<script>
+  const DATA = JSON.parse(document.getElementById('data').textContent);
+  const fmt = n => (n||0).toLocaleString('en-CA');
+
+  document.getElementById('updated').textContent = DATA.generated_at;
+  document.getElementById('totalC').textContent = fmt(DATA.total_contacts);
+
+  // Owner table (static, full picture)
+  (function(){
+    const tb = document.querySelector('#ownerTable tbody');
+    DATA.contacts_by_owner.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r.owner_name||'(Unassigned)'}</td><td>${r.owner_email||'—'}</td>`+
+                   `<td class="num">${fmt(r.count)}</td>`;
+      tb.appendChild(tr);
+    });
+    document.querySelector('#ownerTable tfoot').innerHTML=
+      `<tr><td>Total</td><td></td><td class="num">${fmt(DATA.total_contacts)}</td></tr>`;
+  })();
+
+  // Location dropdown
+  const sel = document.getElementById('loc');
+  DATA.locations.forEach(loc=>{
+    const o=document.createElement('option');o.value=loc;o.textContent=loc;sel.appendChild(o);
+  });
+
+  function render(loc){
+    const d = DATA.by_location[loc];
+    document.getElementById('covLoc').textContent = loc;
+
+    // stat cards
+    const cards = document.getElementById('cards');
+    cards.innerHTML =
+      `<div class="stat"><div class="n">${fmt(d.cr_member_count)}</div><div class="l">Court Reserve members</div></div>`+
+      `<div class="stat"><div class="n">${fmt((DATA.contacts_by_owner.find(o=>o.owner_email===d.owner_email)||{}).count||0)}</div><div class="l">HubSpot contacts (this owner)</div></div>`+
+      `<div class="stat"><div class="n">${fmt(d.not_in_cr_count)}</div><div class="l">Not in Court Reserve</div></div>`;
+
+    // coverage table
+    const tb = document.querySelector('#covTable tbody'); tb.innerHTML='';
+    let tH=0,tC=0;
+    d.coverage.forEach(r=>{
+      tH+=r.hubspot_contacts; tC+=r.in_cr;
+      const tr=document.createElement('tr');
+      if(r.owner_email===d.owner_email) tr.className='me';
+      tr.innerHTML=`<td>${r.owner_name||'(Unassigned)'}</td>`+
+        `<td class="num">${fmt(r.hubspot_contacts)}</td>`+
+        `<td class="num">${fmt(r.in_cr)}</td>`+
+        `<td class="num"><span class="pcttd"><span class="bar"><i style="width:${Math.min(100,r.pct)}%"></i></span>${r.pct}%</span></td>`;
+      tb.appendChild(tr);
+    });
+    const tp = tH? (100*tC/tH):0;
+    document.querySelector('#covTable tfoot').innerHTML=
+      `<tr><td>Total</td><td class="num">${fmt(tH)}</td><td class="num">${fmt(tC)}</td>`+
+      `<td class="num">${tp.toFixed(1)}%</td></tr>`;
+
+    // download button
+    const dl=document.getElementById('dl');
+    dl.href=DATA.artifacts_url; dl.textContent=`⬇ Download — ${loc}`;
+  }
+
+  sel.addEventListener('change', e=>render(e.target.value));
+  render(DATA.locations[0]);
+</script>
+</body>
+</html>"""
