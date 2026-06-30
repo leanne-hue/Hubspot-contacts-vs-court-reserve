@@ -25,7 +25,16 @@ def main():
                   f"was not found among HubSpot owners. Add an override in config.py.")
 
     print("2/4  Pulling Court Reserve members for all locations ...")
-    cr = fetch_court_reserve(headless=True)
+    try:
+        cr = fetch_court_reserve(headless=True)
+    except Exception as e:
+        # If Court Reserve login is blocked from this runner (e.g. bot/IP
+        # challenge on a cloud GitHub runner), don't fail the whole job --
+        # still publish the HubSpot side. Coverage will read 0% until the
+        # Court Reserve pull succeeds (see README: self-hosted runner).
+        print(f"     [ERROR] Court Reserve pull failed: {e}")
+        print("     Publishing HubSpot data only; coverage will show 0% this run.")
+        cr = {}
 
     print("3/4  Building dataset + Excel outreach lists ...")
     data, not_in_cr = build_dataset(contacts, cr)
