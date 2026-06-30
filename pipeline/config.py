@@ -48,9 +48,8 @@ def location_owner_map() -> dict:
 # Secrets / environment
 # ---------------------------------------------------------------------------
 HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "")
-COURT_RESERVE_LOGIN_URL = os.environ.get(
-    "COURT_RESERVE_LOGIN_URL", "https://app.courtreserve.com/Account/Login"
-)
+COURT_RESERVE_LOGIN_URL = (os.environ.get("COURT_RESERVE_LOGIN_URL") or
+                            "https://app.courtreserve.com/Account/Login")
 COURT_RESERVE_USERNAME = os.environ.get("COURT_RESERVE_USERNAME", "")
 COURT_RESERVE_PASSWORD = os.environ.get("COURT_RESERVE_PASSWORD", "")
 
