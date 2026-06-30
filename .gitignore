@@ -1,0 +1,7 @@
+# stale local preview (real output is docs/)
+site/
+__pycache__/
+*.pyc
+/tmp/
+docs/_debug/
+outreach_lists/
