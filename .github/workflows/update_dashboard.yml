@@ -1,0 +1,79 @@
+name: Update dashboard
+
+# Weekly refresh: Mondays at 10:00 AM America/Toronto.
+# GitHub cron is UTC only and does not follow DST, so we trigger at BOTH
+# 14:00 UTC (= 10:00 EDT, summer) and 15:00 UTC (= 10:00 EST, winter) and a
+# guard step below exits unless it is actually 10:00 in Toronto.
+on:
+  schedule:
+    - cron: "0 14 * * 1"
+    - cron: "0 15 * * 1"
+  workflow_dispatch:        # lets you run it manually any time
+
+concurrency:
+  group: update-dashboard
+  cancel-in-progress: false
+
+permissions:
+  contents: write           # allows the workflow to commit the refreshed files
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Guard - only proceed at 10:00 America/Toronto (scheduled runs)
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            H=$(TZ=America/Toronto date +%H)
+            echo "Current Toronto hour: $H"
+            if [ "$H" != "10" ]; then
+              echo "Not 10:00 in Toronto - skipping this trigger."
+              echo "SKIP=1" >> "$GITHUB_ENV"
+            fi
+          fi
+
+      - name: Set up Python
+        if: env.SKIP != '1'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        if: env.SKIP != '1'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Run pipeline (pull data, build dashboard + Excel files)
+        if: env.SKIP != '1'
+        env:
+          HUBSPOT_TOKEN:            ${{ secrets.HUBSPOT_TOKEN }}
+          COURT_RESERVE_USERNAME:   ${{ secrets.COURT_RESERVE_USERNAME }}
+          COURT_RESERVE_PASSWORD:   ${{ secrets.COURT_RESERVE_PASSWORD }}
+          COURT_RESERVE_LOGIN_URL:  ${{ secrets.COURT_RESERVE_LOGIN_URL }}
+        run: python pipeline/run.py
+
+      - name: Upload outreach lists as a PRIVATE artifact (not committed to the repo)
+        if: env.SKIP != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: outreach-lists
+          path: outreach_lists/
+          retention-days: 30
+
+      - name: Commit and push refreshed dashboard
+        if: env.SKIP != '1'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Weekly dashboard refresh ($(TZ=America/Toronto date '+%Y-%m-%d %H:%M %Z'))"
+            git push
+          fi
