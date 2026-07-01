@@ -1,39 +1,35 @@
 """
-Court Reserve client (browser automation via Playwright).
+Court Reserve client (Playwright).
 
-Court Reserve has no public API for this account, and the member grid refuses
-to display the full list (>500 members) -- it points you at the Export. So we
-drive the authenticated UI:
+This is an ENTERPRISE account: after login you land on the Enterprise
+Organizations page, and each location is switched by URL:
+    /Account/SwitchOrg?id=<orgId>
+After switching, /Member/Index?filter=all shows that location's members and the
+"Export" button (button.btn-print-excel) downloads the full member spreadsheet.
 
-  1. Log in once with username + password.
-  2. For each of the 16 locations: switch the org (the green dropdown top-left),
-     open the Member list, click "Export", capture the downloaded spreadsheet,
-     and read every member's email.
+Flow:
+  1. Log in (robust, selector-agnostic: fill the password field + the first
+     visible text/email field, submit).
+  2. For each location: SwitchOrg -> open member list -> Export -> read emails.
 
-As a safety net we also intercept the backend members API
-(backend.courtreserve.com/api/member-management/members) and harvest any emails
-that appear in those JSON responses while the page is open.
-
-If a selector ever drifts (Court Reserve ships UI changes), the functions raise
-with a screenshot saved to site/_debug so you can see what the page looked like.
+A screenshot is saved to /tmp/cr_debug on any failure. Never writes under docs/.
 """
 import os
 import re
 import time
-import glob
+import csv
 import openpyxl
 from playwright.sync_api import sync_playwright
 
 from config import (
-    COURT_RESERVE_LOGIN_URL,
-    COURT_RESERVE_USERNAME,
-    COURT_RESERVE_PASSWORD,
-    COURT_RESERVE_LOCATIONS,
+    COURT_RESERVE_LOGIN_URL, COURT_RESERVE_USERNAME, COURT_RESERVE_PASSWORD,
+    COURT_RESERVE_LOCATIONS, LOCATION_ORGID,
 )
 
-MEMBER_LIST_URL = "https://app.courtreserve.com/Member/Index?filter=all"
+BASE = "https://app.courtreserve.com"
+MEMBER_LIST_URL = BASE + "/Member/Index?filter=all"
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-DEBUG_DIR = "docs/_debug"
+DEBUG_DIR = "/tmp/cr_debug"
 
 
 def _dump(page, name):
@@ -46,123 +42,79 @@ def _dump(page, name):
 
 def _login(page):
     page.goto(COURT_RESERVE_LOGIN_URL, wait_until="domcontentloaded")
-    # Court Reserve login form: username + password fields, then a submit button.
-    page.fill("input[name='UserNameOrEmail'], input[name='Username'], input#UserNameOrEmail, input[type='email']", COURT_RESERVE_USERNAME)
-    page.fill("input[name='Password'], input#Password, input[type='password']", COURT_RESERVE_PASSWORD)
-    page.click("button[type='submit'], input[type='submit'], button:has-text('Sign In'), button:has-text('Log In')")
     page.wait_for_load_state("networkidle")
-    if "Login" in page.url:
+    # Password field is unambiguous; the username is the first visible text/email input.
+    page.wait_for_selector("input[type=password]", timeout=45000)
+    page.locator("input[type=email], input[type=text]").first.fill(COURT_RESERVE_USERNAME)
+    page.locator("input[type=password]").first.fill(COURT_RESERVE_PASSWORD)
+    page.locator("button[type=submit], input[type=submit], button:has-text('Sign In'), "
+                 "button:has-text('Log In')").first.click()
+    page.wait_for_load_state("networkidle")
+    if "/Account/Login" in page.url:
         _dump(page, "login_failed")
-        raise RuntimeError("Court Reserve login appears to have failed (still on Login page). "
-                           "Check COURT_RESERVE_USERNAME / COURT_RESERVE_PASSWORD, or 2FA may be enabled.")
+        raise RuntimeError("Court Reserve login failed (still on /Account/Login). "
+                           "Check COURT_RESERVE_USERNAME / COURT_RESERVE_PASSWORD or 2FA.")
 
 
-def _switch_location(page, location: str):
-    """Open the green org dropdown (top-left) and click the location by name."""
-    # The dropdown toggle is the coloured org box at the very top-left.
-    page.click(".organization-switcher, .navbar-brand, [class*='org']:has-text('')", timeout=5000) if False else None
-    # Robust path: click the element showing the current org name, then the option.
-    try:
-        page.get_by_role("button").filter(has_text=re.compile("|".join(COURT_RESERVE_LOCATIONS))).first.click(timeout=4000)
-    except Exception:
-        # Fallback: click top-left header area
-        page.mouse.click(70, 60)
-    page.wait_for_timeout(500)
-    page.get_by_text(location, exact=True).first.click(timeout=8000)
-    page.wait_for_load_state("networkidle")
-    page.wait_for_timeout(1000)
+def _emails_from_spreadsheet(path):
+    emails = set()
+    if path.lower().endswith(".csv"):
+        with open(path, newline="", encoding="utf-8-sig") as f:
+            for row in csv.reader(f):
+                for v in row:
+                    v = (v or "").strip().lower()
+                    if EMAIL_RE.fullmatch(v):
+                        emails.add(v)
+        return emails
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    for ws in wb.worksheets:
+        for row in ws.iter_rows(values_only=True):
+            for v in row:
+                if v:
+                    s = str(v).strip().lower()
+                    if EMAIL_RE.fullmatch(s):
+                        emails.add(s)
+    return emails
 
 
-def _export_members(page) -> str:
-    """Click Export on the member list and return the downloaded file path."""
+def _export_org_emails(page, org_id):
+    page.goto(f"{BASE}/Account/SwitchOrg?id={org_id}", wait_until="domcontentloaded")
     page.goto(MEMBER_LIST_URL, wait_until="networkidle")
     page.wait_for_timeout(1500)
-    with page.expect_download(timeout=120000) as dl_info:
-        page.click("button:has-text('Export'), a:has-text('Export'), .k-button:has-text('Export')")
-    download = dl_info.value
-    target = os.path.join("/tmp", download.suggested_filename)
-    download.save_as(target)
-    return target
-
-
-def _emails_from_spreadsheet(path: str):
-    """Read an exported .xlsx/.csv and return (rows, emails) where rows are dicts."""
-    rows, emails = [], set()
-    if path.lower().endswith(".csv"):
-        import csv
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            for r in csv.DictReader(f):
-                _collect_row(r, rows, emails)
-        return rows, emails
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    ws = wb.active
-    headers = None
-    for row in ws.iter_rows(values_only=True):
-        if headers is None:
-            headers = [str(h).strip().lower() if h is not None else "" for h in row]
-            continue
-        rec = {headers[i]: row[i] for i in range(len(headers)) if i < len(row)}
-        _collect_row(rec, rows, emails)
-    return rows, emails
-
-
-def _collect_row(rec, rows, emails):
-    # find an email-ish value in the row
-    email = ""
-    for k, v in rec.items():
-        if v and "email" in str(k).lower():
-            email = str(v).strip().lower()
-            break
-    if not email:
-        for v in rec.values():
-            if v and EMAIL_RE.fullmatch(str(v).strip()):
-                email = str(v).strip().lower()
-                break
-    if email and EMAIL_RE.fullmatch(email):
-        emails.add(email)
-        rows.append(rec)
+    with page.expect_download(timeout=180000) as dl_info:
+        page.click("button.btn-print-excel, button:has-text('Export'), a:has-text('Export')")
+    dl = dl_info.value
+    target = os.path.join("/tmp", dl.suggested_filename or f"members_{org_id}.xlsx")
+    dl.save_as(target)
+    return _emails_from_spreadsheet(target)
 
 
 def fetch_court_reserve(locations=None, headless=True) -> dict:
-    """
-    Return {location_name: set_of_member_emails} for every location.
-    """
+    """Return {location_name: set(member_emails)} for every location."""
     locations = locations or COURT_RESERVE_LOCATIONS
     result = {}
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         ctx = browser.new_context(accept_downloads=True)
         page = ctx.new_page()
-
-        # Harvest emails from any backend member API responses, as a safety net.
-        api_emails = {"current": set()}
-
-        def on_response(resp):
-            if "member-management/members" in resp.url:
-                try:
-                    txt = resp.text()
-                    for m in EMAIL_RE.findall(txt):
-                        api_emails["current"].add(m.lower())
-                except Exception:
-                    pass
-
-        page.on("response", on_response)
+        page.set_default_timeout(60000)
 
         _login(page)
 
         for loc in locations:
-            api_emails["current"] = set()
+            org_id = LOCATION_ORGID.get(loc)
+            if not org_id:
+                print(f"  [warn] no orgId configured for {loc}; skipping")
+                result[loc] = set()
+                continue
             try:
-                _switch_location(page, loc)
-                path = _export_members(page)
-                _, emails = _emails_from_spreadsheet(path)
+                emails = _export_org_emails(page, org_id)
             except Exception as e:
-                _dump(page, f"location_{loc.replace(' ', '_')}_error")
-                print(f"  [warn] Export failed for {loc}: {e}. Falling back to API-intercept emails.")
+                _dump(page, f"loc_{loc.replace(' ', '_')}")
+                print(f"  [warn] export failed for {loc} (org {org_id}): {e}")
                 emails = set()
-            emails |= api_emails["current"]  # union with anything the API leaked
             result[loc] = emails
-            print(f"  {loc}: {len(emails)} member emails")
+            print(f"  {loc} (org {org_id}): {len(emails)} member emails")
             time.sleep(1)
 
         browser.close()

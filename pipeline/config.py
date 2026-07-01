@@ -67,3 +67,14 @@ DOWNLOADS_SUBDIR = "downloads"  # site/downloads/<Location>.xlsx
 OUTREACH_DIR = "outreach_lists"
 REPO_URL = "https://github.com/leanne-hue/Hubspot-contacts-vs-court-reserve"
 ACTIONS_URL = REPO_URL + "/actions"
+
+# ---------------------------------------------------------------------------
+# Court Reserve enterprise org IDs per location (from the Enterprise
+# "Organizations" page: /Account/SwitchOrg?id=<orgId> switches context).
+# ---------------------------------------------------------------------------
+LOCATION_ORGID = {
+    "Aurora": 17113, "Barrie": 13487, "Belleville": 15741, "Brantford": 17392,
+    "Burloak": 17621, "Cambridge": 16359, "Don Mills": 21849, "Downsview": 15926,
+    "Oshawa": 15989, "Peterborough": 17702, "Pickering": 14195, "Promenade": 15917,
+    "Red Deer": 16556, "Vaughan": 15790, "Windsor": 13986, "York Mills": 17114,
+}
