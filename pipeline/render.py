@@ -7,10 +7,17 @@ self-contained dashboard HTML.
 Locations are inferred from whatever Court Reserve CSVs exist -- not hardcoded.
 
 Court Reserve coverage is computed once per location, against that location's
-OWN Contact Owner and OWN Court Reserve CSV only ("self_coverage"). This is
-what the dashboard's "Court Reserve coverage" table renders -- it does not
-change based on which location is selected in the dropdown, because a given
-owner's coverage number only makes sense against their own location's data.
+own "source" of HubSpot contacts and own Court Reserve CSV only
+("self_coverage"). This is what the dashboard's "Court Reserve coverage"
+table renders -- it does not change based on which location is selected in
+the dropdown.
+
+Normally a location's "source" is its Contact Owner (e.g. Vaughan ->
+vaughan@pickleplex.ca). But a location that hasn't opened yet has no real
+Contact Owner assignments -- config.LOCATION_LIST_SOURCE lets such a location
+use a HubSpot list/segment (matched by contact ID) as its source instead, so
+its coverage is "list members already in Court Reserve" rather than
+"owner's contacts already in Court Reserve".
 """
 import os
 import json
@@ -21,7 +28,7 @@ from zoneinfo import ZoneInfo
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
-from config import derive_owner_email, SITE_DIR, DOWNLOADS_SUBDIR
+from config import derive_owner_email, SITE_DIR, DOWNLOADS_SUBDIR, LOCATION_LIST_SOURCE
 
 TZ = ZoneInfo("America/Toronto")
 
@@ -30,21 +37,26 @@ def _safe(name):
     return name.replace(" ", "_").replace("/", "-")
 
 
-def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
+def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown", list_members=None):
     """
-    contacts: list of {first,last,email,owner_email,owner_name}
+    contacts: list of {id,first,last,email,owner_email,owner_name}
     cr_members_by_location: {location: set(emails)}  (locations inferred from CSVs)
+    list_members: {location: set(contact_id)} for locations configured in
+        config.LOCATION_LIST_SOURCE (e.g. pre-opening mailing-list locations).
     Returns (data_for_dashboard, not_in_cr_rows). Embedded data = aggregate only
     (no names/emails) -- the per-location xlsx files (written separately by
     write_excels) are what carry the actual contact details, and those are
     published as public static files under docs/downloads/.
     """
+    list_members = list_members or {}
     locations = sorted(cr_members_by_location.keys())
     owner_map = {loc: derive_owner_email(loc) for loc in locations}
 
     by_owner = defaultdict(list)
     for c in contacts:
         by_owner[c["owner_email"]].append(c)
+
+    by_id = {c["id"]: c for c in contacts if c.get("id")}
 
     owner_name_for = {}
     for c in contacts:
@@ -68,19 +80,31 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
     for loc in locations:
         cr_emails = cr_members_by_location.get(loc, set())
         mapped_owner = owner_map[loc]
-        mapped_contacts = by_owner.get(mapped_owner, [])
-        in_cr = sum(1 for c in mapped_contacts if c["email"] and c["email"] in cr_emails)
-        n = len(mapped_contacts)
-        missing = [c for c in mapped_contacts if not c["email"] or c["email"] not in cr_emails]
+
+        if loc in LOCATION_LIST_SOURCE:
+            # Pre-opening / list-based location: source of truth is HubSpot
+            # list membership (matched by contact ID), not Contact Owner.
+            member_ids = list_members.get(loc, set())
+            source_contacts = [by_id[i] for i in member_ids if i in by_id]
+            source = "list"
+            source_label = "Pre-Opening Mailing List"
+        else:
+            source_contacts = by_owner.get(mapped_owner, [])
+            source = "owner"
+            source_label = owner_name_for.get(mapped_owner, mapped_owner)
+
+        in_cr = sum(1 for c in source_contacts if c["email"] and c["email"] in cr_emails)
+        n = len(source_contacts)
+        missing = [c for c in source_contacts if not c["email"] or c["email"] not in cr_emails]
         not_in_cr_rows[loc] = missing
 
-        # This location's TRUE coverage: its own owner's contacts vs its own
+        # This location's TRUE coverage: its own source contacts vs its own
         # Court Reserve member list. Nothing here depends on any other
         # location, so it's safe to render as a static table.
         self_coverage.append({
             "location": loc,
-            "owner_name": owner_name_for.get(mapped_owner, mapped_owner),
-            "owner_email": mapped_owner,
+            "source": source,
+            "source_label": source_label,
             "hubspot_contacts": n,
             "in_cr": in_cr,
             "pct": round(100.0 * in_cr / n, 1) if n else 0.0,
@@ -89,6 +113,9 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
         by_location[loc] = {
             "owner_email": mapped_owner,
             "owner_name": owner_name_for.get(mapped_owner, mapped_owner),
+            "source": source,
+            "source_label": source_label,
+            "hubspot_source_count": n,
             "cr_member_count": len(cr_emails),
             "not_in_cr_count": len(missing),
             "excel_file": f"{DOWNLOADS_SUBDIR}/{_safe(loc)}.xlsx",
@@ -126,7 +153,7 @@ def write_excels(not_in_cr_rows, out_dir=None):
             cell.fill = header_fill
         for c in rows:
             ws.append([c.get("first", ""), c.get("last", ""), c.get("email", ""),
-                       c.get("owner_email", derive_owner_email(loc))])
+                       c.get("owner_email") or derive_owner_email(loc)])
         for col, width in zip("ABCD", (20, 20, 34, 28)):
             ws.column_dimensions[col].width = width
         ws.freeze_panes = "A2"

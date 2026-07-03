@@ -2,6 +2,7 @@
 """Self-contained dashboard HTML. Data is injected at /*__DATA__*/."""
 
 HTML_TEMPLATE = r"""<!DOCTYPE html>
+<!-- dashboard v1.1: static per-location coverage + public downloads -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -67,7 +68,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     <div class="logo">P</div>
     <div>
       <h1>Pickleplex — HubSpot &times; Court Reserve Coverage</h1>
-      <div class="sub">Contacts grouped by Contact Owner (location), cross-referenced with Court Reserve members by email.</div>
+      <div class="sub">Contacts grouped by Contact Owner (or, for pre-opening locations, a HubSpot mailing list), cross-referenced with Court Reserve members by email.</div>
     </div>
     <div class="updated">Last updated<br><strong id="updated"></strong><br><span class="crup">Court Reserve data uploaded: <strong id="crup"></strong></span></div>
   </header>
@@ -86,14 +87,16 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <section>
     <h2>Court Reserve coverage by location</h2>
-    <p class="note">Each location's own Contact Owner, matched against that same location's Court Reserve
-       member list by email. This table shows the correct number for every location at once — it does not
-       change when you switch the dropdown above (the dropdown controls the cards and download button
-       below). The row for the currently selected location is highlighted.</p>
+    <p class="note">Each location's own source of HubSpot contacts, matched against that same location's
+       Court Reserve member list by email. For open locations the source is the Contact Owner; for
+       locations that haven't opened yet, it's a HubSpot list (see "Source" column) since there's no real
+       Contact Owner assignment yet. This table shows the correct number for every location at once — it
+       does not change when you switch the dropdown above (the dropdown controls the cards and download
+       button below). The row for the currently selected location is highlighted.</p>
     <div class="scroll">
       <table id="covTable">
         <thead><tr>
-          <th>Location</th><th>Contact Owner</th><th class="num">HubSpot Contacts</th>
+          <th>Location</th><th>Source</th><th class="num">HubSpot Contacts</th>
           <th class="num">In Court Reserve</th><th class="num">% Coverage</th>
         </tr></thead>
         <tbody></tbody>
@@ -152,7 +155,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     (DATA.self_coverage||[]).forEach(r=>{
       tH+=r.hubspot_contacts; tC+=r.in_cr;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td>${r.location}</td><td>${r.owner_name||'(Unassigned)'}</td>`+
+      tr.innerHTML=`<td>${r.location}</td><td>${r.source_label||'(Unassigned)'}</td>`+
         `<td class="num">${fmt(r.hubspot_contacts)}</td>`+
         `<td class="num">${fmt(r.in_cr)}</td>`+
         `<td class="num"><span class="pcttd"><span class="bar"><i style="width:${Math.min(100,r.pct)}%"></i></span>${r.pct}%</span></td>`;
@@ -181,9 +184,10 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
     // stat cards -- these ARE specific to the selected location and update correctly
     const cards = document.getElementById('cards');
+    const srcLabel = d.source === 'list' ? 'HubSpot contacts (pre-opening list)' : 'HubSpot contacts (this owner)';
     cards.innerHTML =
       `<div class="stat"><div class="n">${fmt(d.cr_member_count)}</div><div class="l">Court Reserve members</div></div>`+
-      `<div class="stat"><div class="n">${fmt((DATA.contacts_by_owner.find(o=>o.owner_email===d.owner_email)||{}).count||0)}</div><div class="l">HubSpot contacts (this owner)</div></div>`+
+      `<div class="stat"><div class="n">${fmt(d.hubspot_source_count)}</div><div class="l">${srcLabel}</div></div>`+
       `<div class="stat"><div class="n">${fmt(d.not_in_cr_count)}</div><div class="l">Not in Court Reserve</div></div>`;
 
     // highlight the matching row in the static coverage table

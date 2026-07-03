@@ -14,7 +14,7 @@ from render import build_dataset, write_excels, render_html
 
 def main():
     print("1/4  Pulling HubSpot contacts + owners ...")
-    contacts, owners = fetch_hubspot(config.HUBSPOT_TOKEN)
+    contacts, owners, list_members = fetch_hubspot(config.HUBSPOT_TOKEN, config.LOCATION_LIST_SOURCE)
     print(f"     {len(contacts):,} contacts, {len(owners)} owners")
 
     print("2/4  Reading Court Reserve CSVs from", config.DATA_DIR, "...")
@@ -26,7 +26,7 @@ def main():
     last_uploaded = last_uploaded_display()
 
     print("3/4  Building dataset + Excel outreach lists ...")
-    data, not_in_cr = build_dataset(contacts, cr, last_uploaded)
+    data, not_in_cr = build_dataset(contacts, cr, last_uploaded, list_members)
     os.makedirs(config.SITE_DIR, exist_ok=True)
     write_excels(not_in_cr)
 

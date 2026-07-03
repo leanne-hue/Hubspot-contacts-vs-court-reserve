@@ -20,6 +20,17 @@ LOCATION_OWNER_OVERRIDES = {
     # "Promenade": "promenademall@pickleplex.ca",
 }
 
+# --- List-based locations ----------------------------------------------------
+# A location that hasn't opened yet has no real Contact Owner assignments in
+# HubSpot, so Contact-Owner-based coverage would be meaningless for it.
+# Locations listed here use a HubSpot list/segment (matched by contact ID)
+# as their "source" of HubSpot contacts instead of Contact Owner, both for
+# the coverage table and for the "not in Court Reserve" download.
+# Find a list's ID from its URL in HubSpot: .../objectLists/<ID>/filters
+LOCATION_LIST_SOURCE = {
+    "Don Mills": 393,   # HubSpot list "Don Mills" -- pre-opening mailing list
+}
+
 
 def derive_owner_email(location: str) -> str:
     """'Don Mills' -> donmills@pickleplex.ca ; 'Vaughan' -> vaughan@pickleplex.ca"""
@@ -35,6 +46,6 @@ HUBSPOT_TOKEN = os.environ.get("HUBSPOT_TOKEN", "")
 # --- Output paths (GitHub Pages serves docs/) -------------------------------
 SITE_DIR = "docs"
 DOWNLOADS_SUBDIR = "downloads"
-OUTREACH_DIR = "outreach_lists"          # private per-location xlsx (artifact)
+OUTREACH_DIR = "outreach_lists"          # unused (kept for backward compat)
 REPO_URL = "https://github.com/leanne-hue/Hubspot-contacts-vs-court-reserve"
 ACTIONS_URL = REPO_URL + "/actions"
