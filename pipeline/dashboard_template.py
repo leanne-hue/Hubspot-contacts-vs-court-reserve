@@ -1,3 +1,18 @@
+Thought process
+Thought process
+File 7 — the large HTML/JS file. Pasting it is fine; just make sure you select-all and delete the old contents first so nothing is left behind.
+
+File 7 of 10
+Filename: dashboard_template.py
+Location: pipeline/dashboard_template.py
+Action: edit existing file → replace all contents.
+
+Direct edit link:
+https://github.com/leanne-hue/Hubspot-contacts-vs-court-reserve/edit/main/pipeline/dashboard_template.py
+
+Select all (Ctrl+A), delete, and paste exactly:
+
+python
 # -*- coding: utf-8 -*-
 """Self-contained dashboard HTML. Data is injected at /*__DATA__*/."""
 
@@ -24,6 +39,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   .logo{font-weight:800;font-size:22px;background:#fff;color:var(--green);
        width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center}
   .updated{margin-left:auto;font-size:12px;opacity:.9;text-align:right}
+  .crup{display:inline-block;margin-top:4px;opacity:.95}
   .controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0 8px}
   .controls label{font-weight:600;font-size:14px}
   select{font-size:15px;padding:10px 14px;border:1px solid var(--line);border-radius:10px;
@@ -68,7 +84,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       <h1>Pickleplex — HubSpot &times; Court Reserve Coverage</h1>
       <div class="sub">Contacts grouped by Contact Owner (location), cross-referenced with Court Reserve members by email.</div>
     </div>
-    <div class="updated">Last updated<br><strong id="updated"></strong></div>
+    <div class="updated">Last updated<br><strong id="updated"></strong><br><span class="crup">Court Reserve data uploaded: <strong id="crup"></strong></span></div>
   </header>
 
   <div class="controls">
@@ -126,6 +142,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   const fmt = n => (n||0).toLocaleString('en-CA');
 
   document.getElementById('updated').textContent = DATA.generated_at;
+  document.getElementById('crup').textContent = DATA.cr_last_uploaded || 'not uploaded yet';
   document.getElementById('totalC').textContent = fmt(DATA.total_contacts);
 
   // Owner table (static, full picture)
@@ -143,6 +160,11 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   // Location dropdown
   const sel = document.getElementById('loc');
+  if(!DATA.locations.length){
+    document.querySelector('.controls').innerHTML =
+      '<em style="color:var(--muted)">No Court Reserve CSVs uploaded yet. Add files to '+
+      '<code>data/court-reserve/</code> and push to populate coverage.</em>';
+  }
   DATA.locations.forEach(loc=>{
     const o=document.createElement('option');o.value=loc;o.textContent=loc;sel.appendChild(o);
   });
@@ -182,7 +204,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   }
 
   sel.addEventListener('change', e=>render(e.target.value));
-  render(DATA.locations[0]);
+  if(DATA.locations.length) render(DATA.locations[0]);
 </script>
 </body>
 </html>"""
