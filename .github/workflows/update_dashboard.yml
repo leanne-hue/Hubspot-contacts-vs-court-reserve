@@ -54,14 +54,6 @@ jobs:
           HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
         run: python pipeline/run.py
 
-      - name: Upload outreach lists as a PRIVATE artifact
-        if: env.SKIP != '1'
-        uses: actions/upload-artifact@v4
-        with:
-          name: outreach-lists
-          path: outreach_lists/
-          retention-days: 30
-
       - name: Commit and push refreshed dashboard
         if: env.SKIP != '1'
         run: |
