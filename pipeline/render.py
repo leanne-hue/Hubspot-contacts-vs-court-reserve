@@ -1,8 +1,9 @@
 """
-Builds the dashboard dataset from HubSpot contacts + Court Reserve member sets,
-writes one Excel file per location ("Not in Court Reserve" outreach lists) into
-a PRIVATE folder (uploaded as a GitHub Actions artifact, never published), and
-renders the self-contained public dashboard HTML (aggregate data only, no PII).
+Builds the dashboard dataset from HubSpot contacts + Court Reserve member sets
+(read from CSVs), writes one private xlsx per location ("Not in Court Reserve"),
+and renders the self-contained public dashboard HTML (aggregate data only).
+
+Locations are inferred from whatever Court Reserve CSVs exist -- not hardcoded.
 """
 import os
 import json
@@ -13,21 +14,19 @@ from zoneinfo import ZoneInfo
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
-from config import (
-    COURT_RESERVE_LOCATIONS, location_owner_map, OUTREACH_DIR, ACTIONS_URL,
-)
+from config import derive_owner_email, OUTREACH_DIR, ACTIONS_URL
 
 TZ = ZoneInfo("America/Toronto")
 
 
-def build_dataset(contacts, cr_members_by_location):
+def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
     """
     contacts: list of {first,last,email,owner_email,owner_name}
-    cr_members_by_location: {location: set(emails)}
-    Returns (data_dict_for_dashboard, not_in_cr_rows).
-    The embedded data contains ONLY aggregate counts -- no contact names/emails.
+    cr_members_by_location: {location: set(emails)}  (locations inferred from CSVs)
+    Returns (data_for_dashboard, not_in_cr_rows). Embedded data = aggregate only.
     """
-    owner_map = location_owner_map()
+    locations = sorted(cr_members_by_location.keys())
+    owner_map = {loc: derive_owner_email(loc) for loc in locations}
 
     by_owner = defaultdict(list)
     for c in contacts:
@@ -52,20 +51,19 @@ def build_dataset(contacts, cr_members_by_location):
     by_location = {}
     not_in_cr_rows = {}
 
-    for loc in COURT_RESERVE_LOCATIONS:
+    for loc in locations:
         cr_emails = cr_members_by_location.get(loc, set())
         coverage = []
         for owner_email in owners_in_order:
-            own_contacts = by_owner.get(owner_email, [])
-            in_cr = sum(1 for c in own_contacts if c["email"] and c["email"] in cr_emails)
-            n = len(own_contacts)
-            pct = round(100.0 * in_cr / n, 1) if n else 0.0
+            own = by_owner.get(owner_email, [])
+            in_cr = sum(1 for c in own if c["email"] and c["email"] in cr_emails)
+            n = len(own)
             coverage.append({
                 "owner_name": owner_name_for.get(owner_email, owner_email or "(Unassigned)"),
                 "owner_email": owner_email or "",
                 "hubspot_contacts": n,
                 "in_cr": in_cr,
-                "pct": pct,
+                "pct": round(100.0 * in_cr / n, 1) if n else 0.0,
             })
 
         mapped_owner = owner_map[loc]
@@ -83,7 +81,8 @@ def build_dataset(contacts, cr_members_by_location):
 
     data = {
         "generated_at": datetime.now(TZ).strftime("%A, %B %-d, %Y at %-I:%M %p %Z"),
-        "locations": COURT_RESERVE_LOCATIONS,
+        "cr_last_uploaded": cr_last_uploaded,
+        "locations": locations,
         "owner_map": owner_map,
         "total_contacts": total_contacts,
         "contacts_by_owner": contacts_by_owner,
@@ -98,9 +97,7 @@ def _safe(name):
 
 
 def write_excels(not_in_cr_rows, out_dir=OUTREACH_DIR):
-    """Write one xlsx per location into the PRIVATE outreach folder."""
     os.makedirs(out_dir, exist_ok=True)
-    owner_map = location_owner_map()
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="1F6F43")
     for loc, rows in not_in_cr_rows.items():
@@ -113,7 +110,7 @@ def write_excels(not_in_cr_rows, out_dir=OUTREACH_DIR):
             cell.fill = header_fill
         for c in rows:
             ws.append([c.get("first", ""), c.get("last", ""), c.get("email", ""),
-                       c.get("owner_email", owner_map[loc])])
+                       c.get("owner_email", derive_owner_email(loc))])
         for col, width in zip("ABCD", (20, 20, 34, 28)):
             ws.column_dimensions[col].width = width
         ws.freeze_panes = "A2"
@@ -121,8 +118,7 @@ def write_excels(not_in_cr_rows, out_dir=OUTREACH_DIR):
 
 
 def render_html(data) -> str:
-    payload = json.dumps(data, ensure_ascii=False)
-    return HTML_TEMPLATE.replace("/*__DATA__*/", payload)
+    return HTML_TEMPLATE.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
 
 
 from dashboard_template import HTML_TEMPLATE  # noqa: E402
