@@ -1,128 +1,96 @@
 # Pickleplex — HubSpot × Court Reserve Coverage Dashboard
 
-A self-contained dashboard that groups HubSpot contacts by **Contact Owner**
-(your location dimension) and cross-references each Court Reserve location's
-member list (matched by **email**) to show coverage and produce per-location
-"not yet a member" outreach lists for marketing.
+Groups HubSpot contacts by **Contact Owner** (your location dimension) and
+cross-references each Court Reserve location's members (matched by **email**) to
+show coverage and produce per-location "not yet a member" outreach lists.
 
-Published via **GitHub Pages**, refreshed automatically **every Monday at
-10:00 AM America/Toronto** by a GitHub Actions workflow.
+Published via **GitHub Pages**, refreshed **every Monday at 10:00 AM
+America/Toronto** (and immediately whenever you update a Court Reserve CSV).
 
----
-
-## What it shows
-
-- **Location dropdown** (all 16 Court Reserve locations) at the top. Everything
-  below updates when you switch locations.
-- **Court Reserve Coverage table** — for the selected location's members, how
-  many of each Contact Owner's HubSpot contacts already exist in Court Reserve,
-  with a `% Coverage` column. The owner that maps to the selected location is
-  highlighted.
-- **Contacts by Contact Owner table** — the **full HubSpot picture** across all
-  owners, shown regardless of the dropdown (design choice: this is the most
-  useful constant reference; it's noted on the dashboard).
-- **Download button** — a per-location Excel file (`Download — <Location>`) of
-  every HubSpot contact under that location's owner who is **not** in that
-  location's Court Reserve member list. Sheet: `Not in Court Reserve`,
-  columns: First Name, Last Name, Email, Contact Owner.
+**Live dashboard:** https://leanne-hue.github.io/Hubspot-contacts-vs-court-reserve/
 
 ---
 
-## Repository layout
+## Data sources
 
-```
+- **HubSpot** — pulled automatically via the HubSpot API (Private App token in
+  the `HUBSPOT_TOKEN` Actions secret). ~123K contacts, owner = location.
+- **Court Reserve** — read from **CSV files you upload** to
+  `data/court-reserve/`. No scraping/automation (Court Reserve has bot
+  protection). One CSV per location; the filename is the location name.
+
+---
+
+## 🔄 How to update Court Reserve data (do this whenever you want fresh numbers)
+
+For **each** Court Reserve location:
+
+1. Log into Court Reserve and switch to that location.
+2. Go to **Reports → Members**.
+3. Set the filters to include **all** members (clear any status/date filters;
+   include active + inactive), then **export as CSV**.
+4. Rename the file to the location name and put it in **`data/court-reserve/`**,
+   replacing the existing file. Examples:
+   - Don Mills → `data/court-reserve/don-mills.csv`
+   - York Mills → `data/court-reserve/york-mills.csv`
+   - Vaughan → `data/court-reserve/vaughan.csv`
+5. **Commit and push.** The GitHub Action rebuilds the dashboard automatically
+   (usually live within ~2 minutes).
+
+Notes:
+- The pipeline **auto-detects** whatever CSVs are in the folder — add a new
+  location just by adding a CSV; remove one by deleting its CSV.
+- Filenames become location names: hyphens/underscores become spaces and each
+  word is capitalized (`red-deer.csv` → "Red Deer").
+- The dashboard shows **"Court Reserve data uploaded: <date>"** based on the
+  last commit that changed this folder, so everyone knows how fresh it is.
+- Only the **Email** column is used (lowercased + trimmed). Other columns are
+  ignored, so extra columns in your export are fine.
+
+Expected CSV columns (from Court Reserve's Members report export) include:
+`Member #, First Name, Last Name, Gender, Family, Family Role, Email,
+Current Membership, Membership Status, ...` — the pipeline finds the **Email**
+column by name (comma- or tab-separated both work).
+
+---
+
+## Repository layoutdata/court-reserve/         <-- drop one <location>.csv here per location
+
 pipeline/
-  config.py              locations, owner-email mapping, env/secrets
-  hubspot.py             pulls all contacts + owners via the HubSpot API
-  courtreserve.py        Playwright: logs in, exports members per location
-  render.py              builds the dataset, writes Excel files, renders HTML
-  dashboard_template.py  the self-contained dashboard HTML
-  run.py                 orchestrator (this is what the weekly job runs)
-  make_demo.py           generates a synthetic PREVIEW (no network/secrets)
-.github/workflows/update_dashboard.yml   weekly cron
-docs/                    GitHub Pages output (index.html + downloads/*.xlsx)
-requirements.txt
-```
 
----
+config.py                 owner-email mapping, paths
 
-## One-time setup
+hubspot.py                HubSpot API pull (unchanged)
 
-### 1. Create the HubSpot Private App token
-HubSpot → **Settings → Integrations → Private Apps → Create a private app**.
-On the **Scopes** tab enable:
-- `crm.objects.contacts.read`
-- `crm.objects.owners.read`
+courtreserve.py           reads the CSVs in data/court-reserve/
 
-Create it and copy the token (starts with `pat-na...`).
+render.py                 builds dataset, Excel files, dashboard HTML
 
-### 2. Add GitHub Actions Secrets
-Repo → **Settings → Secrets and variables → Actions → New repository secret**.
-Create these **exact** names:
+dashboard_template.py     the self-contained dashboard
 
-| Secret name | Value |
-|---|---|
-| `HUBSPOT_TOKEN` | the HubSpot private-app token |
-| `COURT_RESERVE_USERNAME` | your Court Reserve login email |
-| `COURT_RESERVE_PASSWORD` | your Court Reserve password |
-| `COURT_RESERVE_LOGIN_URL` | `https://app.courtreserve.com/Account/Login` (only if the login page differs) |
+run.py                    orchestrator (what the weekly job runs)
 
-### 3. Enable GitHub Pages
-Repo → **Settings → Pages** → Build and deployment → **Deploy from a branch** →
-Branch: **main**, folder: **/docs** → Save. Your URL will be
-`https://leanne-hue.github.io/Hubspot-contacts-vs-court-reserve/`.
+make_demo.py              synthetic preview (no network)
 
-### 4. First run
-Repo → **Actions → Update dashboard → Run workflow** (manual trigger). When it
-finishes, the `docs/` folder is populated and Pages serves the dashboard.
+.github/workflows/update_dashboard.yml
 
----
+docs/                       GitHub Pages output (index.html)
 
-## How the weekly schedule works
-GitHub cron is **UTC only and ignores Daylight Saving**. The workflow therefore
-fires at both `14:00 UTC` and `15:00 UTC` every Monday, and a guard step exits
-unless it is genuinely 10:00 in `America/Toronto`. Result: it runs once, at
-10:00 AM Toronto time, all year round.
+requirements.txt## What's on the dashboard
 
----
-
-## ⚠️ Important: Court Reserve on a cloud runner
-Court Reserve has no public API for this account, so the pipeline logs into the
-website with Playwright and uses the member **Export**. You confirmed login is
-**username + password only** (no 2FA), which is what makes unattended automation
-possible. Two things to watch on the first scheduled run:
-
-1. **Bot/IP checks.** Court Reserve may challenge logins from datacenter IPs
-   (GitHub's runners). If the job's log shows a login failure, the fix is a
-   **self-hosted runner** on a Pickleplex machine (Settings → Actions → Runners
-   → New self-hosted runner). The same workflow then runs from your own IP where
-   you already log in normally. No code changes needed — just change
-   `runs-on: ubuntu-latest` to `runs-on: self-hosted`.
-2. **Selector drift.** If Court Reserve changes its UI, the export step saves a
-   screenshot to `docs/_debug/` so you can see what happened and adjust the
-   selector in `courtreserve.py`.
-
----
+- Location dropdown (all locations that have a CSV).
+- Coverage table: for the selected location's members, how many of each Contact
+  Owner's HubSpot contacts are already Court Reserve members, with % coverage.
+- Contacts-by-Contact-Owner table: the full HubSpot base (all owners).
+- Download button → the private **outreach-lists** artifact on the Actions page
+  (GitHub login required): every HubSpot contact under that location's owner who
+  is NOT yet in Court Reserve (First Name, Last Name, Email, Contact Owner).
+  Contact-level PII is kept off the public page.
 
 ## Run locally (optional)
 ```bash
 pip install -r requirements.txt
-python -m playwright install chromium
 export HUBSPOT_TOKEN=pat-na...
-export COURT_RESERVE_USERNAME=you@pickleplex.ca
-export COURT_RESERVE_PASSWORD=********
-python pipeline/run.py          # writes docs/
+python pipeline/run.py          # reads data/court-reserve/*.csv, writes docs/
+python pipeline/make_demo.py    # synthetic preview, no token needed
 ```
-Preview the layout with synthetic data (no secrets needed):
-```bash
-python pipeline/make_demo.py    # writes docs/ with fake numbers
-```
-
----
-
-## Owner ↔ location mapping
-`pipeline/config.py` derives each owner email from the location name
-(`Vaughan → vaughan@pickleplex.ca`, `Don Mills → donmills@pickleplex.ca`). On
-each run, `run.py` checks these against the real HubSpot owners and prints a
-warning for any mismatch; add an override in `LOCATION_OWNER_OVERRIDES` if one
-location's owner email doesn't follow the pattern.
