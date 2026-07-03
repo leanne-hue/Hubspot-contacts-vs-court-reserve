@@ -1,21 +1,23 @@
-name: Update dashboard
+yamlname: Update dashboard
 
 # Weekly refresh: Mondays at 10:00 AM America/Toronto.
-# GitHub cron is UTC only and does not follow DST, so we trigger at BOTH
-# 14:00 UTC (= 10:00 EDT, summer) and 15:00 UTC (= 10:00 EST, winter) and a
-# guard step below exits unless it is actually 10:00 in Toronto.
+# GitHub cron is UTC and ignores DST, so we fire at 14:00 and 15:00 UTC and a
+# guard exits unless it is actually 10:00 in Toronto.
 on:
   schedule:
     - cron: "0 14 * * 1"
     - cron: "0 15 * * 1"
-  workflow_dispatch:        # lets you run it manually any time
+  workflow_dispatch:        # run manually any time
+  push:
+    paths:
+      - "data/court-reserve/**"   # rebuild immediately when CSVs are updated
 
 concurrency:
   group: update-dashboard
   cancel-in-progress: false
 
 permissions:
-  contents: write           # allows the workflow to commit the refreshed files
+  contents: write
 
 jobs:
   refresh:
@@ -23,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # full history so "last uploaded" date works
 
       - name: Guard - only proceed at 10:00 America/Toronto (scheduled runs)
         run: |
@@ -46,15 +50,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          python -m playwright install --with-deps chromium
 
-      - name: Run pipeline (pull data, build dashboard + Excel files)
+      - name: Run pipeline (HubSpot API + Court Reserve CSVs -> dashboard + Excel)
         if: env.SKIP != '1'
         env:
-          HUBSPOT_TOKEN:            ${{ secrets.HUBSPOT_TOKEN }}
-          COURT_RESERVE_USERNAME:   ${{ secrets.COURT_RESERVE_USERNAME }}
-          COURT_RESERVE_PASSWORD:   ${{ secrets.COURT_RESERVE_PASSWORD }}
-          COURT_RESERVE_LOGIN_URL:  ${{ secrets.COURT_RESERVE_LOGIN_URL }}
+          HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
         run: python pipeline/run.py
 
       - name: Upload outreach lists as a PRIVATE artifact (not committed to the repo)
