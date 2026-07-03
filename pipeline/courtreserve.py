@@ -1,121 +1,86 @@
 """
-Court Reserve client (Playwright).
+Court Reserve data source = manually uploaded CSV exports (NO browser automation).
 
-This is an ENTERPRISE account: after login you land on the Enterprise
-Organizations page, and each location is switched by URL:
-    /Account/SwitchOrg?id=<orgId>
-After switching, /Member/Index?filter=all shows that location's members and the
-"Export" button (button.btn-print-excel) downloads the full member spreadsheet.
+Each CSV in data/court-reserve/ is one location; the filename (without .csv) is
+the location name, inferred at runtime (nothing hardcoded). Emails are read from
+the "Email" column (case-insensitive), lowercased and trimmed.
 
-Flow:
-  1. Log in (robust, selector-agnostic: fill the password field + the first
-     visible text/email field, submit).
-  2. For each location: SwitchOrg -> open member list -> Export -> read emails.
-
-A screenshot is saved to /tmp/cr_debug on any failure. Never writes under docs/.
+Export instructions for updating the CSVs are in the repo README.
 """
 import os
 import re
-import time
 import csv
-import openpyxl
-from playwright.sync_api import sync_playwright
+import glob
+import subprocess
+from datetime import datetime, timezone
 
-from config import (
-    COURT_RESERVE_LOGIN_URL, COURT_RESERVE_USERNAME, COURT_RESERVE_PASSWORD,
-    COURT_RESERVE_LOCATIONS, LOCATION_ORGID,
-)
+from config import DATA_DIR
 
-BASE = "https://app.courtreserve.com"
-MEMBER_LIST_URL = BASE + "/Member/Index?filter=all"
 EMAIL_RE = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
-DEBUG_DIR = "/tmp/cr_debug"
 
 
-def _dump(page, name):
-    os.makedirs(DEBUG_DIR, exist_ok=True)
-    try:
-        page.screenshot(path=f"{DEBUG_DIR}/{name}.png", full_page=True)
-    except Exception:
-        pass
+def canonical_location(path: str) -> str:
+    """data/court-reserve/don-mills.csv -> 'Don Mills'."""
+    base = os.path.splitext(os.path.basename(path))[0]
+    words = re.sub(r"[-_]+", " ", base).strip().split()
+    return " ".join(w.capitalize() for w in words)
 
 
-def _login(page):
-    page.goto(COURT_RESERVE_LOGIN_URL, wait_until="domcontentloaded")
-    page.wait_for_load_state("networkidle")
-    # Password field is unambiguous; the username is the first visible text/email input.
-    page.wait_for_selector("input[type=password]", timeout=45000)
-    page.locator("input[type=email], input[type=text]").first.fill(COURT_RESERVE_USERNAME)
-    page.locator("input[type=password]").first.fill(COURT_RESERVE_PASSWORD)
-    page.locator("button[type=submit], input[type=submit], button:has-text('Sign In'), "
-                 "button:has-text('Log In')").first.click()
-    page.wait_for_load_state("networkidle")
-    if "/Account/Login" in page.url:
-        _dump(page, "login_failed")
-        raise RuntimeError("Court Reserve login failed (still on /Account/Login). "
-                           "Check COURT_RESERVE_USERNAME / COURT_RESERVE_PASSWORD or 2FA.")
-
-
-def _emails_from_spreadsheet(path):
+def _emails_from_csv(path: str) -> set:
     emails = set()
-    if path.lower().endswith(".csv"):
-        with open(path, newline="", encoding="utf-8-sig") as f:
-            for row in csv.reader(f):
-                for v in row:
-                    v = (v or "").strip().lower()
-                    if EMAIL_RE.fullmatch(v):
-                        emails.add(v)
-        return emails
-    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
-    for ws in wb.worksheets:
-        for row in ws.iter_rows(values_only=True):
-            for v in row:
-                if v:
-                    s = str(v).strip().lower()
-                    if EMAIL_RE.fullmatch(s):
-                        emails.add(s)
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        sample = f.read(8192)
+        f.seek(0)
+        try:
+            dialect = csv.Sniffer().sniff(sample, delimiters=",\t;|")
+        except Exception:
+            dialect = csv.excel
+        reader = csv.DictReader(f, dialect=dialect)
+        headers = reader.fieldnames or []
+        # locate the email column (exact 'email' first, then any header containing it)
+        email_col = next((h for h in headers if h and h.strip().lower() == "email"), None)
+        if not email_col:
+            email_col = next((h for h in headers if h and "email" in h.strip().lower()), None)
+        for row in reader:
+            val = (row.get(email_col) or "").strip().lower() if email_col else ""
+            if not val:  # fallback: find an email anywhere in the row
+                for cell in row.values():
+                    c = (cell or "").strip().lower()
+                    if EMAIL_RE.fullmatch(c):
+                        val = c
+                        break
+            if val and EMAIL_RE.fullmatch(val):
+                emails.add(val)
     return emails
 
 
-def _export_org_emails(page, org_id):
-    page.goto(f"{BASE}/Account/SwitchOrg?id={org_id}", wait_until="domcontentloaded")
-    page.goto(MEMBER_LIST_URL, wait_until="networkidle")
-    page.wait_for_timeout(1500)
-    with page.expect_download(timeout=180000) as dl_info:
-        page.click("button.btn-print-excel, button:has-text('Export'), a:has-text('Export')")
-    dl = dl_info.value
-    target = os.path.join("/tmp", dl.suggested_filename or f"members_{org_id}.xlsx")
-    dl.save_as(target)
-    return _emails_from_spreadsheet(target)
-
-
-def fetch_court_reserve(locations=None, headless=True) -> dict:
-    """Return {location_name: set(member_emails)} for every location."""
-    locations = locations or COURT_RESERVE_LOCATIONS
+def fetch_court_reserve(*_args, **_kwargs) -> dict:
+    """Return {location_name: set(member_emails)} for every CSV present."""
     result = {}
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless)
-        ctx = browser.new_context(accept_downloads=True)
-        page = ctx.new_page()
-        page.set_default_timeout(60000)
-
-        _login(page)
-
-        for loc in locations:
-            org_id = LOCATION_ORGID.get(loc)
-            if not org_id:
-                print(f"  [warn] no orgId configured for {loc}; skipping")
-                result[loc] = set()
-                continue
-            try:
-                emails = _export_org_emails(page, org_id)
-            except Exception as e:
-                _dump(page, f"loc_{loc.replace(' ', '_')}")
-                print(f"  [warn] export failed for {loc} (org {org_id}): {e}")
-                emails = set()
-            result[loc] = emails
-            print(f"  {loc} (org {org_id}): {len(emails)} member emails")
-            time.sleep(1)
-
-        browser.close()
+    for path in sorted(glob.glob(os.path.join(DATA_DIR, "*.csv"))):
+        loc = canonical_location(path)
+        result[loc] = _emails_from_csv(path)
     return result
+
+
+def last_uploaded_display() -> str:
+    """
+    Human-readable date the Court Reserve CSVs were last updated. Uses the last
+    git commit that touched data/court-reserve/ (robust on CI, where file mtimes
+    are reset by checkout); falls back to newest file mtime locally.
+    """
+    try:
+        out = subprocess.check_output(
+            ["git", "log", "-1", "--format=%cI", "--", DATA_DIR],
+            stderr=subprocess.DEVNULL, text=True,
+        ).strip()
+        if out:
+            dt = datetime.fromisoformat(out)
+            return dt.strftime("%B %-d, %Y")
+    except Exception:
+        pass
+    files = glob.glob(os.path.join(DATA_DIR, "*.csv"))
+    if files:
+        dt = datetime.fromtimestamp(max(os.path.getmtime(f) for f in files), tz=timezone.utc)
+        return dt.strftime("%B %-d, %Y")
+    return "not uploaded yet"
