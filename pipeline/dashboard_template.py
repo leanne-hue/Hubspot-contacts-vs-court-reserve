@@ -1,18 +1,3 @@
-Thought process
-Thought process
-File 7 — the large HTML/JS file. Pasting it is fine; just make sure you select-all and delete the old contents first so nothing is left behind.
-
-File 7 of 10
-Filename: dashboard_template.py
-Location: pipeline/dashboard_template.py
-Action: edit existing file → replace all contents.
-
-Direct edit link:
-https://github.com/leanne-hue/Hubspot-contacts-vs-court-reserve/edit/main/pipeline/dashboard_template.py
-
-Select all (Ctrl+A), delete, and paste exactly:
-
-python
 # -*- coding: utf-8 -*-
 """Self-contained dashboard HTML. Data is injected at /*__DATA__*/."""
 
