@@ -1,16 +1,13 @@
-yamlname: Update dashboard
+name: Update dashboard
 
-# Weekly refresh: Mondays at 10:00 AM America/Toronto.
-# GitHub cron is UTC and ignores DST, so we fire at 14:00 and 15:00 UTC and a
-# guard exits unless it is actually 10:00 in Toronto.
 on:
   schedule:
     - cron: "0 14 * * 1"
     - cron: "0 15 * * 1"
-  workflow_dispatch:        # run manually any time
+  workflow_dispatch:
   push:
     paths:
-      - "data/court-reserve/**"   # rebuild immediately when CSVs are updated
+      - "data/court-reserve/**"
 
 concurrency:
   group: update-dashboard
@@ -26,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0        # full history so "last uploaded" date works
+          fetch-depth: 0
 
       - name: Guard - only proceed at 10:00 America/Toronto (scheduled runs)
         run: |
@@ -51,13 +48,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run pipeline (HubSpot API + Court Reserve CSVs -> dashboard + Excel)
+      - name: Run pipeline
         if: env.SKIP != '1'
         env:
           HUBSPOT_TOKEN: ${{ secrets.HUBSPOT_TOKEN }}
         run: python pipeline/run.py
 
-      - name: Upload outreach lists as a PRIVATE artifact (not committed to the repo)
+      - name: Upload outreach lists as a PRIVATE artifact
         if: env.SKIP != '1'
         uses: actions/upload-artifact@v4
         with:
@@ -74,6 +71,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "Weekly dashboard refresh ($(TZ=America/Toronto date '+%Y-%m-%d %H:%M %Z'))"
+            git commit -m "Dashboard refresh"
             git push
           fi
