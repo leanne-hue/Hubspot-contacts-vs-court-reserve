@@ -75,24 +75,25 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
   <div class="controls">
     <label for="loc">Court Reserve location:</label>
     <select id="loc"></select>
-    <div class="dl"><a id="dl" class="btn" href="#" target="_blank" rel="noopener">⬇ Download list</a></div>
+    <div class="dl"><a id="dl" class="btn" href="#" download>⬇ Download list</a></div>
   </div>
 
-  <p class="privnote"><i>The outreach spreadsheets contain contact details and are kept private.</i>
-     The download opens the GitHub Actions page — open the latest "Update dashboard" run and download the
-     <b>outreach-lists</b> artifact (requires GitHub login). The dashboard tables below show aggregate counts only.</p>
+  <p class="privnote"><i>These lists contain contact names and email addresses for outreach purposes —
+     please use responsibly.</i> Each location's "not yet a Court Reserve member" list downloads directly
+     from this page, no login required.</p>
 
   <div class="cards" id="cards"></div>
 
   <section>
-    <h2>Court Reserve coverage — <span id="covLoc"></span></h2>
-    <p class="note">For the selected location's member list, this shows how many of each Contact Owner's HubSpot
-       contacts already exist as members at that location (matched by email). The row matching the selected
-       location's owner is highlighted.</p>
+    <h2>Court Reserve coverage by location</h2>
+    <p class="note">Each location's own Contact Owner, matched against that same location's Court Reserve
+       member list by email. This table shows the correct number for every location at once — it does not
+       change when you switch the dropdown above (the dropdown controls the cards and download button
+       below). The row for the currently selected location is highlighted.</p>
     <div class="scroll">
       <table id="covTable">
         <thead><tr>
-          <th>Contact Owner</th><th class="num">HubSpot Contacts</th>
+          <th>Location</th><th>Contact Owner</th><th class="num">HubSpot Contacts</th>
           <th class="num">In Court Reserve</th><th class="num">% Coverage</th>
         </tr></thead>
         <tbody></tbody>
@@ -117,7 +118,6 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   <footer>
     Generated automatically from the HubSpot API and Court Reserve member exports.
-    Outreach lists (contacts not yet in Court Reserve) are kept private and downloaded from GitHub Actions.
   </footer>
 </div>
 
@@ -143,6 +143,28 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
       `<tr><td>Total</td><td></td><td class="num">${fmt(DATA.total_contacts)}</td></tr>`;
   })();
 
+  // Court Reserve coverage table -- static, one true row per location.
+  // Does NOT depend on the dropdown selection; only the highlighted row does.
+  const covRows = {};
+  (function(){
+    const tb = document.querySelector('#covTable tbody'); tb.innerHTML='';
+    let tH=0,tC=0;
+    (DATA.self_coverage||[]).forEach(r=>{
+      tH+=r.hubspot_contacts; tC+=r.in_cr;
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r.location}</td><td>${r.owner_name||'(Unassigned)'}</td>`+
+        `<td class="num">${fmt(r.hubspot_contacts)}</td>`+
+        `<td class="num">${fmt(r.in_cr)}</td>`+
+        `<td class="num"><span class="pcttd"><span class="bar"><i style="width:${Math.min(100,r.pct)}%"></i></span>${r.pct}%</span></td>`;
+      tb.appendChild(tr);
+      covRows[r.location] = tr;
+    });
+    const tp = tH? (100*tC/tH):0;
+    document.querySelector('#covTable tfoot').innerHTML=
+      `<tr><td colspan="2">Total</td><td class="num">${fmt(tH)}</td><td class="num">${fmt(tC)}</td>`+
+      `<td class="num">${tp.toFixed(1)}%</td></tr>`;
+  })();
+
   // Location dropdown
   const sel = document.getElementById('loc');
   if(!DATA.locations.length){
@@ -156,36 +178,21 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 
   function render(loc){
     const d = DATA.by_location[loc];
-    document.getElementById('covLoc').textContent = loc;
 
-    // stat cards
+    // stat cards -- these ARE specific to the selected location and update correctly
     const cards = document.getElementById('cards');
     cards.innerHTML =
       `<div class="stat"><div class="n">${fmt(d.cr_member_count)}</div><div class="l">Court Reserve members</div></div>`+
       `<div class="stat"><div class="n">${fmt((DATA.contacts_by_owner.find(o=>o.owner_email===d.owner_email)||{}).count||0)}</div><div class="l">HubSpot contacts (this owner)</div></div>`+
       `<div class="stat"><div class="n">${fmt(d.not_in_cr_count)}</div><div class="l">Not in Court Reserve</div></div>`;
 
-    // coverage table
-    const tb = document.querySelector('#covTable tbody'); tb.innerHTML='';
-    let tH=0,tC=0;
-    d.coverage.forEach(r=>{
-      tH+=r.hubspot_contacts; tC+=r.in_cr;
-      const tr=document.createElement('tr');
-      if(r.owner_email===d.owner_email) tr.className='me';
-      tr.innerHTML=`<td>${r.owner_name||'(Unassigned)'}</td>`+
-        `<td class="num">${fmt(r.hubspot_contacts)}</td>`+
-        `<td class="num">${fmt(r.in_cr)}</td>`+
-        `<td class="num"><span class="pcttd"><span class="bar"><i style="width:${Math.min(100,r.pct)}%"></i></span>${r.pct}%</span></td>`;
-      tb.appendChild(tr);
-    });
-    const tp = tH? (100*tC/tH):0;
-    document.querySelector('#covTable tfoot').innerHTML=
-      `<tr><td>Total</td><td class="num">${fmt(tH)}</td><td class="num">${fmt(tC)}</td>`+
-      `<td class="num">${tp.toFixed(1)}%</td></tr>`;
+    // highlight the matching row in the static coverage table
+    Object.values(covRows).forEach(tr => tr.className = '');
+    if (covRows[loc]) covRows[loc].className = 'me';
 
-    // download button
+    // download button -- direct public file, no login needed
     const dl=document.getElementById('dl');
-    dl.href=DATA.artifacts_url; dl.textContent=`⬇ Download — ${loc}`;
+    dl.href = d.excel_file; dl.textContent=`⬇ Download – ${loc}`;
   }
 
   sel.addEventListener('change', e=>render(e.target.value));

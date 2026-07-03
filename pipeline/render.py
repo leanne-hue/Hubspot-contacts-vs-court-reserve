@@ -1,9 +1,16 @@
 """
 Builds the dashboard dataset from HubSpot contacts + Court Reserve member sets
-(read from CSVs), writes one private xlsx per location ("Not in Court Reserve"),
-and renders the self-contained public dashboard HTML (aggregate data only).
+(read from CSVs), writes one PUBLIC xlsx per location ("Not in Court Reserve")
+into docs/downloads/ so it's served directly by GitHub Pages, and renders the
+self-contained dashboard HTML.
 
 Locations are inferred from whatever Court Reserve CSVs exist -- not hardcoded.
+
+Court Reserve coverage is computed once per location, against that location's
+OWN Contact Owner and OWN Court Reserve CSV only ("self_coverage"). This is
+what the dashboard's "Court Reserve coverage" table renders -- it does not
+change based on which location is selected in the dropdown, because a given
+owner's coverage number only makes sense against their own location's data.
 """
 import os
 import json
@@ -14,16 +21,23 @@ from zoneinfo import ZoneInfo
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
-from config import derive_owner_email, OUTREACH_DIR, ACTIONS_URL
+from config import derive_owner_email, SITE_DIR, DOWNLOADS_SUBDIR
 
 TZ = ZoneInfo("America/Toronto")
+
+
+def _safe(name):
+    return name.replace(" ", "_").replace("/", "-")
 
 
 def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
     """
     contacts: list of {first,last,email,owner_email,owner_name}
     cr_members_by_location: {location: set(emails)}  (locations inferred from CSVs)
-    Returns (data_for_dashboard, not_in_cr_rows). Embedded data = aggregate only.
+    Returns (data_for_dashboard, not_in_cr_rows). Embedded data = aggregate only
+    (no names/emails) -- the per-location xlsx files (written separately by
+    write_excels) are what carry the actual contact details, and those are
+    published as public static files under docs/downloads/.
     """
     locations = sorted(cr_members_by_location.keys())
     owner_map = {loc: derive_owner_email(loc) for loc in locations}
@@ -47,37 +61,40 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
     contacts_by_owner.sort(key=lambda r: r["count"], reverse=True)
     total_contacts = len(contacts)
 
-    owners_in_order = [r["owner_email"] for r in contacts_by_owner]
     by_location = {}
     not_in_cr_rows = {}
+    self_coverage = []
 
     for loc in locations:
         cr_emails = cr_members_by_location.get(loc, set())
-        coverage = []
-        for owner_email in owners_in_order:
-            own = by_owner.get(owner_email, [])
-            in_cr = sum(1 for c in own if c["email"] and c["email"] in cr_emails)
-            n = len(own)
-            coverage.append({
-                "owner_name": owner_name_for.get(owner_email, owner_email or "(Unassigned)"),
-                "owner_email": owner_email or "",
-                "hubspot_contacts": n,
-                "in_cr": in_cr,
-                "pct": round(100.0 * in_cr / n, 1) if n else 0.0,
-            })
-
         mapped_owner = owner_map[loc]
         mapped_contacts = by_owner.get(mapped_owner, [])
+        in_cr = sum(1 for c in mapped_contacts if c["email"] and c["email"] in cr_emails)
+        n = len(mapped_contacts)
         missing = [c for c in mapped_contacts if not c["email"] or c["email"] not in cr_emails]
         not_in_cr_rows[loc] = missing
+
+        # This location's TRUE coverage: its own owner's contacts vs its own
+        # Court Reserve member list. Nothing here depends on any other
+        # location, so it's safe to render as a static table.
+        self_coverage.append({
+            "location": loc,
+            "owner_name": owner_name_for.get(mapped_owner, mapped_owner),
+            "owner_email": mapped_owner,
+            "hubspot_contacts": n,
+            "in_cr": in_cr,
+            "pct": round(100.0 * in_cr / n, 1) if n else 0.0,
+        })
 
         by_location[loc] = {
             "owner_email": mapped_owner,
             "owner_name": owner_name_for.get(mapped_owner, mapped_owner),
             "cr_member_count": len(cr_emails),
-            "coverage": coverage,
             "not_in_cr_count": len(missing),
+            "excel_file": f"{DOWNLOADS_SUBDIR}/{_safe(loc)}.xlsx",
         }
+
+    self_coverage.sort(key=lambda r: r["hubspot_contacts"], reverse=True)
 
     data = {
         "generated_at": datetime.now(TZ).strftime("%A, %B %-d, %Y at %-I:%M %p %Z"),
@@ -87,16 +104,15 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown"):
         "total_contacts": total_contacts,
         "contacts_by_owner": contacts_by_owner,
         "by_location": by_location,
-        "artifacts_url": ACTIONS_URL,
+        "self_coverage": self_coverage,
     }
     return data, not_in_cr_rows
 
 
-def _safe(name):
-    return name.replace(" ", "_").replace("/", "-")
-
-
-def write_excels(not_in_cr_rows, out_dir=OUTREACH_DIR):
+def write_excels(not_in_cr_rows, out_dir=None):
+    """Writes one public xlsx per location into docs/downloads/ (or out_dir if given)."""
+    if out_dir is None:
+        out_dir = os.path.join(SITE_DIR, DOWNLOADS_SUBDIR)
     os.makedirs(out_dir, exist_ok=True)
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="1F6F43")
