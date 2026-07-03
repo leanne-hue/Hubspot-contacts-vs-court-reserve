@@ -1,5 +1,5 @@
 """
-Orchestrator: pull HubSpot + Court Reserve, build the dashboard and Excel files.
+Orchestrator: pull HubSpot via API, read Court Reserve CSVs, build dashboard + Excel.
 Run from the repo root:  python pipeline/run.py
 """
 import os
@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import config
 from hubspot import fetch_hubspot
-from courtreserve import fetch_court_reserve
+from courtreserve import fetch_court_reserve, last_uploaded_display
 from render import build_dataset, write_excels, render_html
 
 
@@ -17,35 +17,22 @@ def main():
     contacts, owners = fetch_hubspot(config.HUBSPOT_TOKEN)
     print(f"     {len(contacts):,} contacts, {len(owners)} owners")
 
-    # Validate the location -> owner-email mapping against real owners.
-    real_emails = {o["email"] for o in owners.values() if o["email"]}
-    for loc, email in config.location_owner_map().items():
-        if email not in real_emails:
-            print(f"     [warn] derived owner '{email}' for location '{loc}' "
-                  f"was not found among HubSpot owners. Add an override in config.py.")
-
-    print("2/4  Pulling Court Reserve members for all locations ...")
-    try:
-        cr = fetch_court_reserve(headless=True)
-    except Exception as e:
-        # If Court Reserve login is blocked from this runner (e.g. bot/IP
-        # challenge on a cloud GitHub runner), don't fail the whole job --
-        # still publish the HubSpot side. Coverage will read 0% until the
-        # Court Reserve pull succeeds (see README: self-hosted runner).
-        print(f"     [ERROR] Court Reserve pull failed: {e}")
-        print("     Publishing HubSpot data only; coverage will show 0% this run.")
-        cr = {}
+    print("2/4  Reading Court Reserve CSVs from", config.DATA_DIR, "...")
+    cr = fetch_court_reserve()
+    if not cr:
+        print("     [warn] no CSVs found in data/court-reserve/ — coverage will be empty.")
+    for loc in sorted(cr):
+        print(f"     {loc}: {len(cr[loc]):,} member emails")
+    last_uploaded = last_uploaded_display()
 
     print("3/4  Building dataset + Excel outreach lists ...")
-    data, not_in_cr = build_dataset(contacts, cr)
+    data, not_in_cr = build_dataset(contacts, cr, last_uploaded)
     os.makedirs(config.SITE_DIR, exist_ok=True)
-    write_excels(not_in_cr)  # -> private outreach_lists/
+    write_excels(not_in_cr)
 
     print("4/4  Rendering dashboard HTML ...")
     with open(os.path.join(config.SITE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(render_html(data))
-
-    # .nojekyll so GitHub Pages serves files/folders starting with _ etc.
     open(os.path.join(config.SITE_DIR, ".nojekyll"), "w").close()
     print("Done. Output in", config.SITE_DIR)
 
