@@ -1,57 +1,90 @@
-First Name,Last Name,Email
-,,luke@pickleplexclub.ca
-,,erica@pickleplex.ca
-,,shaun@pickleplex.ca
-Adam,Jung,adamjung026@gmail.com
-Adam,Ross,aross@lcs.on.ca
-Adrea,McLellan,adrea66@outlook.com
-Albert,Chan,altc.chan@icloud.com
-Amandeep,Singh,amanpvp9@gmail.com
-Andrew,Ratcliff,andrew.ratcliff@rogers.com
-Andrew,Ratcliff,andrewr@pickleplex.ca
-Angela,Lavigne,angelawlavigne@gmail.com
-Annette,Hayes,cdnhaze@gmail.com
-Billy,Nolan,nolan_billy@hotmail.com
-Carlo,Fonceca,carlo_fonceca@yahoo.com
-Casey,O,shoveltest@hotmail.com
-Chris,Clarke,chrishwclarke@gmail.com
-Craig,Ralph,craigjralph@yahoo.com
-Darrel,Revoy,darrelrevoy@gmail.com
-Dave,Fenton,fentond0007@gmail.com
-Deepak,Kumar,deepakk3103@gmail.com
-Don,Farrell,don@mjhservices.ca
-Erica,Evans,eevans@terpmail.umd.edu
-Greg,Finnamore,goleafs400@outlook.com
-Howie,Budd,howie.budd@gmail.com
-Irfan,Shaban,irfan@shaban.com
-Jay,Chaudhari,jay66936693@gmail.com
-Jess,Andrews,jessandrews4@outlook.com
-Jhane,Brasier,brasierj@mac.com
-Jodi,Chittick,jchittick@me.com
-Johnathon,Lloyd,johnathonlloyd@live.ca
-Joy,McIlwaine,joy.mcilwaine@gmail.com
-Julie,Young,jyoung@goodlifefitness.com
-Kalvin,Andrews,laker77red@gmail.com
-Kerry,Reynolds,kerry@pickleplex.ca
-Lakshay,Sharma,20.shay.shar@gmail.com
-Liz,Croft,elizabethcroft99@gmail.com
-Michael,Nissenthall,mnissenthall@gmail.com
-Michelle,Martin,mymartin.thorn@gmail.com
-Paul,Richardson,paul.richardson1625@gmail.com
-Rachel,Naish,shebibnaish@gmail.com
-Sam,Allen,sam-allen@live.ca
-Sarah,Budd,sarahbudd17@gmail.com
-Scott,Duncan,ccclavin1@gmail.com
-Serge,Dupont,sergedupont@rogers.com
-Shaun,Linsao,shaunlinsao@hotmail.com
-Sherri,MacDuff,s_macduff@hotmail.com
-Sherry,Shearer,shearer.sherry27@gmail.com
-Stephanie,Cook,missstephanienie@gmail.com
-Stephanie,Sobek-Swant,stephanie.sobek-swant@raresites.org
-Susan,Inkersell,sinkersell@gmail.com
-Susan,Keberer,suekeberer@yahoo.com
-Teresa,Cheng,tcinca924@gmail.com
-Teresa,Cheng,beacons_celadon7a@icloud.com
-Tim,MacGregor,tim__mac@outlook.com
-Wendy,Andrews,wendyandrews99@gmail.com
-Zoya,Tawhidi,tawhidi.zoya@gmail.com
+MembershipNumber,FirstName,LastName,Gender,FamilyName,FamilyRoleDisplay,Email,MembershipName,MembershipStatus,CurrentMembershipStartDateOrigin,CurrentMembershipCancellationDateOrigin,Balance,Credit
+10010697,,,,,,Luke@pickleplexclub.ca,Hourly Play Member,Currently Active,2026-03-23T16:19:42.433,,0,0
+10010705,,,,,,erica@pickleplex.ca,Hourly Play Member,Currently Active,2026-03-23T16:20:24.67,,0,0
+10077363,,,,,,shaun@pickleplex.ca,Head Office (Network),Currently Active,2026-04-03T14:18:10.72,,0,0
+7967266,Adam,Jung,Male,,,adamjung026@gmail.com,Founding Pickleprime Member (Network),Currently Active,2025-09-05T16:47:18.07,,0,0
+10821872,Adam,Ross,,,,aross@lcs.on.ca,Hourly Play Member,Currently Active,2026-06-22T13:34:47.467,,0,0
+10485879,Adrea,McLellan,Female,,,adrea66@outlook.com,Hourly Play Member,Currently Active,2026-05-18T23:51:33.493,,0,0
+7730998,Albert,Chan,Male,,,altc.chan@icloud.com,Server Pickleprime Member (Network),Currently Active,2025-10-13T04:00:00,,0,0
+10010685,Alex,Dorbyk,,,,alex@pickleplex.ca,Hourly Play Member,Currently Active,2026-07-14T19:17:19.64,,0,0
+10368511,Amandeep,Singh,Male,,,amanpvp9@gmail.com,Hourly Play Member,Currently Active,2026-05-03T18:41:21.767,,0,0
+9272042,Andrew,Ratcliff,Male,,,andrew.ratcliff@rogers.com,Hourly Play Member,Currently Active,2026-04-07T15:08:52.817,,0,0
+10010926,Andrew,Ratcliff,Male,,,andrewr@pickleplex.ca,Hourly Play Member,Currently Active,2026-03-23T16:49:29.46,,14.13,0
+10391202,Angela,Lavigne,Female,,,angelawlavigne@gmail.com,Hourly Play Member,Currently Active,2026-05-06T15:09:29.957,,0,0
+10458951,Annette,Hayes,,,,cdnhaze@gmail.com,Hourly Play Member,Currently Active,2026-05-15T16:56:31.383,,0,0
+11146589,Barb,McDougall,Female,,,barb.sheehan67@gmail.com,Hourly Play Member,Currently Active,2026-07-29T17:27:17.837,,0,0
+11154592,Barb,Westropp,Female,,,bwestropp@cogeco.ca,Hourly Play Member,Currently Active,2026-07-30T18:29:26.217,,0,0
+10224165,Billy,Nolan,Male,,,nolan_billy@hotmail.com,Hourly Play Member,Currently Active,2026-04-16T03:05:08.187,,0,0
+11146918,Carla,Carmichael,Female,,,carx2@hotmail.com,Hourly Play Member,Currently Active,2026-07-29T18:05:27.02,,0,0
+6786673,Carlo,Fonceca,Male,,,carlo_fonceca@yahoo.com,Founding Pickleprime Member (Network),Currently Active,2025-05-26T04:00:00,,0,0
+11112006,Carol,Weafer-Lloyd,Female,,,cweaferlloyd@gmail.com,Hourly Play Member,Currently Active,2026-07-25T16:48:26.153,,0,0
+10523135,Casey,O,Male,,,Shoveltest@hotmail.com,Hourly Play Member,Currently Active,2026-05-23T18:30:35.207,,0,0
+11185036,Cathy,Crough,Female,,,crough4477@gmail.com,Hourly Play Member,Currently Active,2026-08-01T19:00:43.547,,0,0
+10309956,Chris,Clarke,Male,,,chrishwclarke@gmail.com,Hourly Play Member,Currently Active,2026-04-26T00:30:27.817,,0,0
+11150024,Christina,T,Female,,,ecaterina2002@gmail.com,Hourly Play Member,Currently Active,2026-07-29T23:55:24.853,,0,0
+10944627,Clare,Atkinson,Female,,,clareatkinson4@hotmail.com,Hourly Play Member,Currently Active,2026-07-06T12:47:43.463,,0,0
+11146533,Clare,Vassos,Female,,,clarevassos@hotmail.com,Hourly Play Member,Currently Active,2026-07-29T17:20:53.827,,0,0
+11067198,Clinton,Smith,Male,Smith,Primary,clinton.smith007@gmail.com,Hourly Play Member,Currently Active,2026-07-20T11:46:53.663,,0,0
+7186104,Colin,Williams,Male,,,buffalospice@hotmail.com,Founding Pickleprime Member (Network),Currently Active,2025-05-05T20:44:32.573,,0,0
+10494612,Craig,Ralph,Male,,,craigjralph@yahoo.com,Hourly Play Member,Currently Active,2026-05-20T10:04:47.383,,0,0
+10825152,Darrel,Revoy,Male,,,darrelrevoy@gmail.com,Hourly Play Member,Currently Active,2026-06-22T20:09:53.567,,0,0
+11175897,Dave,Adamson,Male,,,adamsondh@aol.com,Hourly Play Member,Currently Active,2026-07-31T17:17:48.48,,0,0
+7392957,Dave,Fenton,Male,,,fentond0007@gmail.com,Challenger Pickleprime Member (Network),Currently Active,2025-06-16T04:00:00,,0,0
+10625314,Deepak,Kumar,Male,,,deepakk3103@gmail.com,Hourly Play Member,Currently Active,2026-06-02T14:15:31.817,,0,0
+10329120,Don,Farrell,Male,,,Don@mjhservices.ca,Hourly Play Member,Currently Active,2026-04-28T18:41:27.15,,0,0
+10971683,Donna,Bowmer,Female,,,djbowmer1@gmail.com,Hourly Play Member,Currently Active,2026-07-09T18:48:28.153,,0,0
+11006875,Donna,Kayser,Female,,,donnakayser@eastlink.ca,Hourly Play Member,Currently Active,2026-07-14T00:25:04.617,,0,0
+10423276,Erica,Evans,,,,eevans@terpmail.umd.edu,Hourly Play Member,Currently Active,2026-05-10T20:59:50.907,,0,0
+10191965,Greg,Finnamore,,,,goleafs400@outlook.com,Hourly Play Member,Currently Active,2026-04-11T21:22:03.807,,0,0
+10907902,Howie,Budd,Male,,,howie.budd@gmail.com,Hourly Play Member,Currently Active,2026-07-01T11:00:49.393,,0,0
+10564305,Irfan,Shaban,Male,,,irfan@shaban.com,Founding Pickleprime Member (Network),Currently Active,2025-12-15T20:32:46.467,,0,0
+7102418,Jay,Chaudhari,Male,,,jay66936693@gmail.com,Founding Pickleprime Member (Network),Currently Active,2025-06-05T01:56:09.33,,0,0
+10167205,Jess,Andrews,Female,,,jessandrews4@outlook.com,Hourly Play Member,Currently Active,2026-04-09T21:05:28.007,,0,0
+10259357,Jhane,Brasier,Female,,,brasierj@mac.com,Hourly Play Member,Currently Active,2026-04-19T19:50:14.523,,0,0
+10494617,Jodi,Chittick,Female,,,jchittick@me.com,Hourly Play Member,Currently Active,2026-05-20T10:11:07.397,,0,0
+10167217,Johnathon,Lloyd,Male,,,johnathonlloyd@live.ca,Hourly Play Member,Currently Active,2026-04-09T21:06:17.467,,0,0
+10315497,Joy,McIlwaine,Female,,,joy.mcilwaine@gmail.com,Hourly Play Member,Currently Active,2026-04-26T20:54:42.757,,0,0
+10944724,julie,bagshaw,Female,,,juliebullock5@gmail.com,Hourly Play Member,Currently Active,2026-07-06T13:05:07.567,,0,0
+10298778,Julie,Young,Female,,,jyoung@goodlifefitness.com,Hourly Play Member,Currently Active,2026-04-24T21:05:11.293,,0,0
+10431613,Kalvin,Andrews,Male,Andrews,Primary,laker77red@gmail.com,Hourly Play Member,Currently Active,2026-05-12T00:00:56.143,,0,0
+11152488,kelly,Reynolds,Female,,,kreynolds741@gmail.com,Hourly Play Member,Currently Active,2026-07-30T13:37:35.643,,0,0
+10010940,Kerry,Reynolds,Female,,,kerry@pickleplex.ca,Hourly Play Member,Currently Active,2026-07-06T13:49:15.907,,14.13,0
+6660632,Kye,Borcillo,Female,Ysabella Borcillo,Primary,mkyel@yahoo.com,Founding Pickleprime Member (Network),Currently Active,2025-05-09T04:00:00,,0,0
+10116781,Lakshay,Sharma,Male,,,20.shay.shar@gmail.com,Hourly Play Member,Currently Active,2026-04-03T19:40:07.367,,0,0
+10097810,Liz,Croft,Female,,,elizabethcroft99@gmail.com,Hourly Play Member,Currently Active,2026-04-02T12:43:22.937,,0,0
+11173638,Lois,Concannon,Female,,,lgconcannon@gmail.com,Hourly Play Member,Currently Active,2026-07-31T10:53:32.84,,0,0
+11180253,Marg,Meldrum,Female,Meldrum,Primary,meldrum@sympatico.ca,Hourly Play Member,Currently Active,2026-08-01T01:01:22.433,,0,0
+11174621,Marilyn,Damant,Female,,,dana.mame@hotmail.com,Hourly Play Member,Currently Active,2026-07-31T14:46:25.23,,0,0
+11144206,Maris,Lubbock,Female,,,mlubbock@gmail.com,Hourly Play Member,Currently Active,2026-07-29T09:06:14.607,,0,0
+11141195,Mark,Shaughnessy,,,,mshaughnessy@sympatico.ca,Hourly Play Member,Currently Active,2026-07-28T21:30:20.067,,0,0
+10865955,Michael,Nissenthall,Male,,,mnissenthall@gmail.com,Hourly Play Member,Currently Active,2026-06-27T20:56:55.6,,0,0
+10229597,Michelle,Martin,Female,,,mymartin.thorn@gmail.com,Hourly Play Member,Currently Active,2026-04-16T17:12:19.463,,0,0
+11152017,Mike,Reynolds,Male,,,mikereynolds741@gmail.com,Hourly Play Member,Currently Active,2026-07-30T11:44:40.513,,0,0
+11164247,Monica,Jackson,Female,,,mizmon11@gmail.com,Hourly Play Member,Currently Active,2026-07-30T22:34:52.61,,0,0
+10960838,Paul,Miles,,,,milespaul63@gmail.com,Hourly Play Member,Currently Active,2026-07-08T15:26:21.263,,0,0
+10520621,Paul,Richardson,,,,paul.richardson1625@gmail.com,Hourly Play Member,Currently Active,2026-05-23T15:24:19.34,,0,0
+11154958,Paula,Nash,Female,,,rnpnash@bell.net,Hourly Play Member,Currently Active,2026-07-30T19:17:14.623,,0,0
+10619264,Rachel,Naish,Female,,,shebibnaish@gmail.com,Hourly Play Member,Currently Active,2026-06-01T18:20:13.15,,0,0
+10875791,Sam,Allen,Male,,,sam-allen@live.ca,Hourly Play Member,Currently Active,2026-06-29T01:21:08.577,,0,0
+10907979,Sarah,Budd,Female,,,sarahbudd17@gmail.com,Hourly Play Member,Currently Active,2026-07-01T11:35:16.317,,0,0
+6390733,Scott,Duncan,Male,,,ccclavin1@gmail.com,Founding Pickleprime Member (Network),Currently Active,2025-06-01T16:47:53.237,,0,0
+9227479,Seane,Madge,,,,seanemadge@gmail.com,Server Pickleprime Member (Network),Currently Active,2026-01-26T05:00:00,,0,0
+10256505,Serge,Dupont,,,,sergedupont@rogers.com,Hourly Play Member,Currently Active,2026-04-19T15:25:01.05,,0,0
+10838835,Shaun,Linsao,Male,,,Shaunlinsao@hotmail.com,Hourly Play Member,Currently Active,2026-06-24T17:47:07.953,,0,0
+11149778,Shauna,Longmuir,Female,Longmuir,Primary,shauna.longmuir@flemingcollege.ca,Hourly Play Member,Currently Active,2026-07-29T23:26:22.307,,0,0
+11148210,Shawna,Smith,Female,,,Bsmith60@cogeco.ca,Hourly Play Member,Currently Active,2026-07-29T20:36:01.637,,0,0
+11141899,Sheila,Rogoski,Female,,,Sheila.rogoski@gmail.com,Hourly Play Member,Currently Active,2026-07-28T22:44:25.663,,0,0
+10867994,Sherri,MacDuff,Female,,,s_macduff@hotmail.com,Hourly Play Member,Currently Active,2026-06-28T01:14:06.957,,0,0
+10118188,Sherry,Shearer,Female,Shearer,Primary,shearer.sherry27@gmail.com,Hourly Play Member,Currently Active,2026-04-03T21:30:08.237,,0,0
+10375136,Stephanie,Cook,Female,,,missstephanienie@gmail.com,Hourly Play Member,Currently Active,2026-05-04T18:40:02.767,,0,0
+10651685,Stephanie,Sobek-Swant,,,,stephanie.sobek-swant@raresites.org,Hourly Play Member,Currently Active,2026-06-05T18:56:53.45,,0,0
+10273450,Susan,Inkersell,Female,,,sinkersell@gmail.com,Hourly Play Member,Currently Active,2026-04-21T18:28:39.117,,0,0
+10146292,Susan,Keberer,Female,,,suekeberer@yahoo.com,Hourly Play Member,Currently Active,2026-04-07T00:57:28.01,,0,0
+11144310,Susy,Louie,Female,Wang,Primary,susy.peterborough@gmail.com,Hourly Play Member,Currently Active,2026-07-29T11:14:26.713,,0,0
+10502133,Teresa,Cheng,Female,,,tcinca924@gmail.com,Hourly Play Member,Currently Active,2026-05-21T13:19:03.747,,0,0
+10503899,Teresa,Cheng,Female,,,beacons_celadon7a@icloud.com,Hourly Play Member,Currently Active,2026-05-21T17:28:51.253,,0,0
+10136554,Tim,MacGregor,Male,,,tim__mac@outlook.com,Hourly Play Member,Currently Active,2026-04-05T21:51:38.793,,0,0
+11141693,Wayne,Eddington,Male,,,weddington@live.ca,Hourly Play Member,Currently Active,2026-07-28T22:21:50.11,,0,0
+10431612,Wendy,Andrews,Female,Andrews,Primary,wendyandrews99@gmail.com,Hourly Play Member,Currently Active,2026-05-11T23:49:53.603,,0,0
+11171201,xyrus,gonzales,Male,,,saiphilip09@gmail.com,Hourly Play Member,Currently Active,2026-07-31T06:34:46.363,,0,0
+10369638,Zoya,Tawhidi,Female,,,tawhidi.zoya@gmail.com,Hourly Play Member,Currently Active,2026-05-03T20:50:25.093,,0,0
