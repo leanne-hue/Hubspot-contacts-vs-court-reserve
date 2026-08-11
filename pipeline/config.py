@@ -31,6 +31,14 @@ LOCATION_LIST_SOURCE = {
     "Don Mills": 393,   # HubSpot list "Don Mills" -- pre-opening mailing list
 }
 
+# --- Locations with no Court Reserve account yet -----------------------------
+# These locations have real Contact Owner assignments in HubSpot, but no
+# Court Reserve org/account exists yet, so there's nothing to compute
+# coverage against. They're excluded from the Court Reserve coverage table
+# and the per-location "not in Court Reserve" download, and instead shown
+# in their own section with just a raw HubSpot contact count.
+NO_CR_LOCATIONS = ["Goderich"]
+
 
 def derive_owner_email(location: str) -> str:
     """'Don Mills' -> donmills@pickleplex.ca ; 'Vaughan' -> vaughan@pickleplex.ca"""
