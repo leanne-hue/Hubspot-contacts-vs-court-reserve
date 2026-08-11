@@ -105,6 +105,18 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     </div>
   </section>
 
+  <section id="noCrSection" style="display:none">
+    <h2>Locations without a Court Reserve account yet</h2>
+    <p class="note">These locations have HubSpot Contact Owners set up but no Court Reserve org yet,
+       so there's no membership data to compare against — just the raw HubSpot contact count.</p>
+    <div class="scroll">
+      <table id="noCrTable">
+        <thead><tr><th>Location</th><th>Owner</th><th class="num">HubSpot Contacts</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
   <section>
     <h2>Contacts by Contact Owner — full HubSpot base</h2>
     <p class="note">This table always shows the complete HubSpot picture across all owners, regardless of the
@@ -166,6 +178,20 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
     document.querySelector('#covTable tfoot').innerHTML=
       `<tr><td colspan="2">Total</td><td class="num">${fmt(tH)}</td><td class="num">${fmt(tC)}</td>`+
       `<td class="num">${tp.toFixed(1)}%</td></tr>`;
+  })();
+
+  // Locations without a Court Reserve account yet -- just a raw contact count
+  (function(){
+    const rows = DATA.no_cr_locations || [];
+    if(!rows.length) return;
+    document.getElementById('noCrSection').style.display = '';
+    const tb = document.querySelector('#noCrTable tbody');
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${r.location}</td><td>${r.owner_name||r.owner_email||'—'}</td>`+
+                   `<td class="num">${fmt(r.hubspot_contacts)}</td>`;
+      tb.appendChild(tr);
+    });
   })();
 
   // Location dropdown
