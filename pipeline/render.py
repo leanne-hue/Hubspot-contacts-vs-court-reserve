@@ -28,7 +28,7 @@ from zoneinfo import ZoneInfo
 import openpyxl
 from openpyxl.styles import Font, PatternFill
 
-from config import derive_owner_email, SITE_DIR, DOWNLOADS_SUBDIR, LOCATION_LIST_SOURCE
+from config import derive_owner_email, SITE_DIR, DOWNLOADS_SUBDIR, LOCATION_LIST_SOURCE, NO_CR_LOCATIONS
 
 TZ = ZoneInfo("America/Toronto")
 
@@ -123,6 +123,19 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown", 
 
     self_coverage.sort(key=lambda r: r["hubspot_contacts"], reverse=True)
 
+    # Locations with no Court Reserve account yet: no coverage to compute,
+    # just report the raw HubSpot contact count for that location's owner.
+    no_cr_locations = []
+    for loc in NO_CR_LOCATIONS:
+        mapped_owner = derive_owner_email(loc)
+        source_contacts = by_owner.get(mapped_owner, [])
+        no_cr_locations.append({
+            "location": loc,
+            "owner_email": mapped_owner,
+            "owner_name": owner_name_for.get(mapped_owner, mapped_owner),
+            "hubspot_contacts": len(source_contacts),
+        })
+
     data = {
         "generated_at": datetime.now(TZ).strftime("%A, %B %-d, %Y at %-I:%M %p %Z"),
         "cr_last_uploaded": cr_last_uploaded,
@@ -132,6 +145,7 @@ def build_dataset(contacts, cr_members_by_location, cr_last_uploaded="unknown", 
         "contacts_by_owner": contacts_by_owner,
         "by_location": by_location,
         "self_coverage": self_coverage,
+        "no_cr_locations": no_cr_locations,
     }
     return data, not_in_cr_rows
 
